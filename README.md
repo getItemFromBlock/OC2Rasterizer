@@ -4,7 +4,7 @@ This project is a rasterizer that renders 3D textured models onto the projector 
 Note that the project also compiles as a native windows app via the provided .sln file.
 While it is not strictly required to make the program run, it is the part of the program that makes the required binary files that contains both the model and textures used by the program.
 
-<img src="https://github.com/getItemFromBlock/OC2Rasterizer/blob/main/Assets/readme/preview-earth.png" height="400" />
+<img src="https://github.com/getItemFromBlock/OC2Rasterizer/blob/main/Assets/Readme/preview-earth.png" height="400" />
 
 ## Building
 ### Open Computers 2 (Sedna)
