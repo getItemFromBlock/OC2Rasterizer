@@ -383,7 +383,6 @@ void ModelLoader::CreateModelFile(const char* source, const char* tex, const cha
 	Loop(data);
 
 	std::vector<u32> output;
-	// Saves size as a 64 bit number, C3D can't handles that many triangles but its easier to parse
 
 	output.push_back((u32)(faces.size()));
 	for (u32 i = 0; i < faces.size(); i++)
@@ -423,12 +422,13 @@ void ModelLoader::CreateModelFile(const char* source, const char* tex, const cha
 		output.push_back(number);
 	}
 	free(texFile);
-	SaveFile(dest, output.data(), output.size());
+
+	SaveFile(dest, output.data(), (u32)(output.size()));
 }
 
 #endif
 
-ModelData ModelLoader::ParseModelFile(const char* source, u32* triCount, Maths::IVec2& res)
+ModelData ModelLoader::ParseModelFile(const char* source, const char* skybox, u32* triCount)
 {
 	ModelData result;
 	u32 size;
@@ -466,15 +466,37 @@ ModelData ModelLoader::ParseModelFile(const char* source, u32* triCount, Maths::
 	s32 comp;
 	assert(pos + texSize <= len);
 	u8* texPtr = reinterpret_cast<u8*>(fData + pos);
-	u8* texData = stbi_load_from_memory(texPtr, texSize * sizeof(u32), &res.x, &res.y, &comp, 4);
+	u8* texData = stbi_load_from_memory(texPtr, texSize * sizeof(u32), &result.tRes.x, &result.tRes.y, &comp, 4);
 	if (texData == NULL)
 	{
 		printf("Error - failed to load texture: %s\n", stbi_failure_reason());
 		free(data);
 		return result;
 	}
+
+	u8* texData2 = NULL;
+	IVec2 tmpRes;
+	if (skybox != NULL)
+	{
+		char* skyBoxData = LoadFile(skybox, &texSize);
+		texData2 = stbi_load_from_memory(reinterpret_cast<u8*>(skyBoxData), texSize, &tmpRes.x, &tmpRes.y, &comp, 4);
+		free(skyBoxData);
+		if (texData2 == NULL)
+		{
+			printf("Error - failed to load skybox texture: %s\n", stbi_failure_reason());
+		}
+		if (tmpRes.x * 6 != tmpRes.y)
+		{
+			printf("Error - skybox texture has incorrect size: [%d;%d]\nHeight should be 6 * Width", tmpRes.x, tmpRes.y);
+			stbi_image_free(texData2);
+			texData2 = NULL;
+		}
+	}
+	
 	result.faces = tris;
 	result.tex = reinterpret_cast<u32*>(texData);
+	result.sky = reinterpret_cast<u32*>(texData2);
+	result.sRes = tmpRes;
 	free(data);
 	return result;
 }

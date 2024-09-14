@@ -119,8 +119,8 @@ void RenderThread::CopyToScreen(HDC hdc, IVec2 res)
 	{
 		for (int i = 0; i < res.x; i++)
 		{
-			int x = i * SIZEX / res.x;
-			int y = j * SIZEY / res.y;
+			int x = i * resX / res.x;
+			int y = j * resY / res.y;
 			outputBuffer[counter] = colorBuffer[x + y * SIZEX];
 			counter++;
 		}
@@ -143,38 +143,56 @@ void RenderThread::CopyToScreen(HDC hdc, IVec2 res)
 void RenderThread::RenderFrame(HDC hdc, Maths::IVec2 res)
 {
 	if (static_cast<u64>(res.x) * res.y > outputBuffer.size()) outputBuffer.resize(static_cast<u64>(res.x) * res.y);
-	ClearScreen();
+	if (rasterizer.HasSkyboxLoaded())
+	{
+		ClearDBOnly();
+	}
+	else
+	{
+		ClearScreen();
+	}
 	f32 iTime = GetTotalTime();
 	//Rasterizer::DrawScreen(*this, FP32(frame*0.025f));
-	Rasterizer::DrawScreen(*this, iTime);
+	rasterizer.DrawScreen(this, iTime);
 	CopyToScreen(hdc, res);
 }
 #else
 void RenderThread::CopyToScreen(FILE* out)
 {
-	for (u32 j = 0; j < SIZEY; j++)
+	const u32 factor = scaleFactor;
+	for (u32 j = 0; j < SIZEY / factor; j++)
 	{
-		for (u32 i = 0; i < SIZEX; i++)
+		for (u32 i = 0; i < SIZEX / factor; i++)
 		{
 			u16 pixel = colorBuffer[j * SIZEX + i];
-			for (u32 k = 0; k < 2; k++)
+			for (u32 k = 0; k < factor; k++)
 			{
-				for (u32 l = 0; l < 2; l++)
+				for (u32 l = 0; l < factor; l++)
 				{
-					stagingBuffer[(j * 2 + k) * RESX + 2 * i + l] = pixel;
+					u32 x = i * factor + l;
+					u32 y = j * factor + k;
+					if (x >= SIZEX || y >= SIZEY) continue;
+					stagingBuffer[y * SIZEX + x] = pixel;
 				}
 			}
 		}
 	}
 	fseek(out, 0, SEEK_SET);
-	fwrite(stagingBuffer, sizeof(unsigned short), RESX * RESY, out);
+	fwrite(stagingBuffer, sizeof(unsigned short), SIZEX * SIZEY, out);
 }
 
 void RenderThread::RenderFrame(FILE* out)
 {
-	ClearScreen();
+	if (rasterizer.HasSkyboxLoaded())
+	{
+		ClearDBOnly();
+	}
+	else
+	{
+		ClearScreen();
+	}
 	f32 iTime = GetTotalTime();
-	Rasterizer::DrawScreen(*this, iTime);
+	rasterizer.DrawScreen(this, iTime);
 	CopyToScreen(out);
 }
 #endif
@@ -197,8 +215,22 @@ void RenderThread::ClearScreen()
 	}
 }
 
+void RenderThread::ClearDBOnly()
+{
+	f32 min = -INFINITY;
+	for (u32 i = 0; i < SIZEX * SIZEY; i++)
+	{
+		colorBuffer[i] = 0;
+		//colorBuffer[i] = 0x202020;
+		depthBuffer[i] = min;
+	}
+}
+
 #ifdef _WIN32
-void RenderThread::Init()
+RenderThread::RenderThread(u32 scale) :
+	scaleFactor(scale),
+	resX(SIZEX / scale),
+	resY(SIZEY / scale)
 {
 	Resources::ModelLoader::CreateModelFile("Assets/Models/spaceship_v2.obj",	"Assets/Textures/ship.png",				"Assets/Output/spaceship.bin");
 	Resources::ModelLoader::CreateModelFile("Assets/Models/ball.obj",			"Assets/Textures/ball.png",				"Assets/Output/ball.bin");
@@ -214,18 +246,20 @@ void RenderThread::Init()
 	Resources::ModelLoader::CreateModelFile("Assets/Models/golem.obj",			"Assets/Textures/golem.png",			"Assets/Output/golem.bin");
 	Resources::ModelLoader::CreateModelFile("Assets/Models/tnt.obj",			"Assets/Textures/tnt.png",				"Assets/Output/tnt.bin");
 
-	Rasterizer::Init("Assets/Output/tnt.bin");
+	rasterizer.Init("Assets/Output/spaceship.bin", "Assets/Cubemaps/hall.png");
 	start = GetNow();
 }
 #endif
 
-void RenderThread::Init(const char * file)
+RenderThread::RenderThread(const char* file, const char* background, u32 scale) :
+	scaleFactor(scale),
+	resX(SIZEX / scale),
+	resY(SIZEY / scale)
 {
-	Rasterizer::Init(file);
+	rasterizer.Init(file, background);
 	start = GetNow();
 }
 
-void RenderThread::DeInit()
+RenderThread::~RenderThread()
 {
-	Rasterizer::DeInit();
 }

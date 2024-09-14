@@ -2,9 +2,6 @@
 
 #include <stdio.h>
 
-// TODO enable this if using Vulkan, or any other API that invert some axis
-// #define INVERTED_PROJECTION
-
 namespace Maths
 {
 
@@ -166,19 +163,15 @@ namespace Maths
 
     Mat4 Mat4::CreatePerspectiveProjectionMatrix(f32 near, f32 far, f32 fov, f32 ratio)
     {
-        f32 s = 1.0f / tanf(Util::ToRadians(fov / 2.0f));
-        f32 param1 = -(far + near) / (far - near);
-        f32 param2 = -(2 * near * far) / (far - near);
         Mat4 out;
-        out.at(0, 0) = s / ratio;
-#ifdef INVERTED_PROJECTION
-        out.at(1, 1) = -s; // Update for Vulkan (because Y axis is inverted from OpenGL)
-#else
-        out.at(1, 1) = s;
-#endif
-        out.at(2, 2) = param1;
+        f32 s = 1.0f / tanf(Util::ToRadians(fov * 0.5f));
+        f32 param1 = -(far + near) / (far - near);
+        f32 param2 = -(2 * far * near) / (far - near);
+        out.at(0, 0) = s * ratio;
+        out.at(1, 1) = -s;
+        out.at(2, 2) = param2;
         out.at(2, 3) = -1;
-        out.at(3, 2) = param2;
+        out.at(3, 2) = param1;
         return out;
     }
 
@@ -229,5 +222,32 @@ namespace Maths
         Vec3 y = Vec3(content[4], content[5], content[6]);
         Vec3 z = Vec3(content[8], content[9], content[10]);
         return Vec3(x.Length(), y.Length(), z.Length());
+    }
+
+    Vec3 Maths::Mat4::GetPositionFromTranslation() const
+    {
+        return Vec3(content[12], content[13], content[14]);
+    }
+
+    Mat4 Mat4::FastInverse() const
+    {
+        f32 det = at(0, 0) * (at(1, 1) * at(2, 2) - at(2, 1) * at(1, 2)) -
+            at(0, 1) * (at(1, 0) * at(2, 2) - at(1, 2) * at(2, 0)) +
+            at(0, 2) * (at(1, 0) * at(2, 1) - at(1, 1) * at(2, 0));
+
+        double invdet = 1 / det;
+
+        Mat4 result;
+        result.at(0, 0) = (at(1, 1) * at(2, 2) - at(2, 1) * at(1, 2)) * invdet;
+        result.at(0, 1) = (at(0, 2) * at(2, 1) - at(0, 1) * at(2, 2)) * invdet;
+        result.at(0, 2) = (at(0, 1) * at(1, 2) - at(0, 2) * at(1, 1)) * invdet;
+        result.at(1, 0) = (at(1, 2) * at(2, 0) - at(1, 0) * at(2, 2)) * invdet;
+        result.at(1, 1) = (at(0, 0) * at(2, 2) - at(0, 2) * at(2, 0)) * invdet;
+        result.at(1, 2) = (at(1, 0) * at(0, 2) - at(0, 0) * at(1, 2)) * invdet;
+        result.at(2, 0) = (at(1, 0) * at(2, 1) - at(2, 0) * at(1, 1)) * invdet;
+        result.at(2, 1) = (at(2, 0) * at(0, 1) - at(0, 0) * at(2, 1)) * invdet;
+        result.at(2, 2) = (at(0, 0) * at(1, 1) - at(1, 0) * at(0, 1)) * invdet;
+        result.at(3, 3) = 1;
+        return result;
     }
 }

@@ -124,6 +124,9 @@ namespace Maths
         // Return a vector with the same direction that 'in', but with length 1
         inline Vec3 Normalize() const;
 
+        inline u32 GetLargestScalar() const;
+        inline Vec2 DeleteScalarAt(u32 index) const;
+
     };
 
     class Vec4
@@ -181,7 +184,7 @@ namespace Maths
         Mat4 operator*(const Mat4& a) const;
 
         Vec4 operator*(const Vec4& a) const;
-
+            ;
         static Mat4 Identity();
 
         static Mat4 CreateTransformMatrix(const Vec3& position, const Vec3& rotation, const Vec3& scale);
@@ -206,7 +209,7 @@ namespace Maths
 
         static Mat4 CreateZRotationMatrix(f32 angle);
 
-        // aspect ratio is width / height
+        // aspect ratio is height / width
         static Mat4 CreatePerspectiveProjectionMatrix(f32 near, f32 far, f32 fov, f32 aspect);
 
         static Mat4 CreateOrthoProjectionMatrix(f32 near, f32 far, f32 fov, f32 aspect);
@@ -221,6 +224,10 @@ namespace Maths
         inline const f32& at(const u8 x, const u8 y) const;
 
         Vec3 GetScaleFromTranslation() const;
+
+        Vec3 GetPositionFromTranslation() const;
+
+        Mat4 FastInverse() const;
     };
 
     class Quat
@@ -297,6 +304,8 @@ namespace Maths
         inline f32 MinF(f32 a, f32 b);
 
         inline f32 MaxF(f32 a, f32 b);
+
+        inline u32 ULog2(u32 a);
     };
 }
 

@@ -1,104 +1,76 @@
 #include "Rasterizer.hpp"
 
 #include "Maths/Maths.hpp"
-#include "Resources/ModelLoader.hpp"
 #include "Defines.hpp"
+#include "RenderThread.hpp"
 
 using namespace Maths;
 using namespace Resources;
 
-const Vec3 lightDir = Vec3(-3, 2, 2).Normalize();
-
-#define HSIZEX SIZEX/2
-#define HSIZEY SIZEY/2
-
-#define TEX_ALPHA
-#define TEX_REPEAT
-#define SPECULAR
+const Vec3 lightDir = Vec3(-3, 5, 2).Normalize();
 
 float EdgeFunction(const Vec2 p, const Vec2 a, const Vec2 b)
 {
     return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
 }
 
-Triangle* tris;
-u32* tex;
-u32 triCount = 0;
-IVec2 tRes;
-
-Vec3 sample(Vec2 uv)
+void Rasterizer::Init(const char* path, const char* skyboxPath)
 {
-    s32 x = (s32)(floorf(uv.x * tRes.x));
-    s32 y = (s32)(floorf(uv.y * tRes.y));
-#ifndef TEX_REPEAT
-    if (x < 0) x = 0;
-    if (x >= tRes.x) x = tRes.x - 1;
-    if (y < 0) y = 0;
-    if (y >= tRes.y) y = tRes.y - 1;
-#else
-    x = x % tRes.x;
-    if (x < 0) x += tRes.x;
-    y = y % tRes.y;
-    if (y < 0) y += tRes.y;
-#endif
-    assert(x >= 0 && x < tRes.x && y >= 0 && y < tRes.y);
-    u32 col = tex[x + (y * tRes.x)];
-    Vec3 result;
-    result.x = (f32)(col & 0xff);
-    result.y = (f32)((col >> 8) & 0xff);
-    result.z = (f32)((col >> 16) & 0xff);
-    return result;
-}
-
-Vec4 sample2(Vec2 uv)
-{
-    s32 x = (s32)(floorf(uv.x * tRes.x));
-    s32 y = (s32)(floorf(uv.y * tRes.y));
-#ifndef TEX_REPEAT
-    if (x < 0) x = 0;
-    if (x >= tRes.x) x = tRes.x - 1;
-    if (y < 0) y = 0;
-    if (y >= tRes.y) y = tRes.y - 1;
-#else
-    x = x % tRes.x;
-    if (x < 0) x += tRes.x;
-    y = y % tRes.y;
-    if (y < 0) y += tRes.y;
-#endif
-    assert(x >= 0 && x < tRes.x && y >= 0 && y < tRes.y);
-    u32 col = tex[x + (y * tRes.x)];
-    Vec4 result;
-    result.x = (f32)(col & 0xff);
-    result.y = (f32)((col >> 8) & 0xff);
-    result.z = (f32)((col >> 16) & 0xff);
-    result.w = (f32)((col >> 24) & 0xff);
-    return result;
-}
-
-void Rasterizer::Init(const char* path)
-{
-    ModelData data = ModelLoader::ParseModelFile(path, &triCount, tRes);
+    ModelData data = ModelLoader::ParseModelFile(path, skyboxPath, &triCount);
     tris = data.faces;
-    tex = data.tex;
+    texture = Texture(data.tex, data.tRes);
+    skybox = Texture(data.sky, data.sRes);
 }
 
-void Rasterizer::DeInit()
+Rasterizer::~Rasterizer()
 {
     if (tris != NULL)
     {
         free(tris);
         tris = NULL;
-        ModelLoader::FreeImageData(tex);
-        tex = NULL;
+        texture.Destroy();
+        skybox.Destroy();
     }
 }
 
-void Rasterizer::DrawScreen(RenderThread& th, f32 dt)
+void Rasterizer::DrawSkybox(RenderThread* th, const Mat4& v)
+{
+    const IVec2 res = th->getResolution();
+    const Vec2 half = Vec2(res.x / 2, res.y / 2);
+    const Vec2 hRes = Vec2(1.0f / half.x, 1.0f / half.y);
+    const Vec3 dx = (v * Vec4(hRes.x, 0, 0, 0)).GetVector();
+    const Vec3 dy = (v * Vec4(0, -hRes.y, 0, 0)).GetVector();
+    const Vec3 dz = (v * Vec4(0, 0, -1, 0)).GetVector();
+    for (u32 y = 0; y < (u32)(res.y); y++)
+    {
+        for (u32 x = 0; x < (u32)(res.x); x++)
+        {
+            Vec2 uv = Vec2((f32)(x), (f32)(y)) - half;
+            Vec3 dir = (dx * uv.x + dy * uv.y + dz);
+            u32 color = skybox.SampleCubeRaw(Vec3(dir.x, dir.y, dir.z));
+            u32 c = ((color & 0xff) << 16) | (color & 0xff00) | ((color & 0xff0000) >> 16);
+            th->SetColor(x, y, c);
+        }
+    }
+}
+
+void Rasterizer::DrawScreen(RenderThread* th, f32 dt)
 {
     f32 tm = dt * 0.2f;
-    f32 tm2 = tm * 2;
-    tm2 = sinf(tm2) * 0.4f;
-    Mat4 m = Mat4::CreateTransformMatrix(Vec3(0, 0, -5), Vec3(0, tm, tm2));
+    //f32 tm2 = tm * 2;
+    //tm2 = sinf(tm2) * 0.4f;
+    Mat4 m = Mat4::CreateTransformMatrix(Vec3(0, 0, 0), Vec3(0, 0, 0));
+    tm *= 2.0f;
+    const Vec3 cameraPos = Vec3(sin(tm) * 7, sin(tm * 0.846876f) * 2.0f, cos(tm) * 7);
+    Mat4 v = Mat4::CreateViewMatrix(cameraPos, Vec3(0, 0, 0), Vec3(0, 1, 0));
+    if (skybox.IsValid())
+    {
+        DrawSkybox(th, v.FastInverse());
+    }
+    Mat4 mv = v * m;
+    const IVec2 res = th->getResolution();
+    const IVec2 hRes = IVec2(res.x/2, res.y/2);
+
     //std::copy(content, content + 16, &m.content->value);
     // screen render
     for (u32 t = 0; t < triCount; ++t)
@@ -112,10 +84,10 @@ void Rasterizer::DrawScreen(RenderThread& th, f32 dt)
         for (int k = 0; k < 3; k++)
         {
             Vertex& d = tris[t].data[k];
-            points[k] = (m * Vec4(d.pos, 1)).GetVector();
+            points[k] = (mv * Vec4(d.pos, 1)).GetVector();
             points[k].z = 1 / points[k].z;
-            points[k].x = 2 * points[k].x * -points[k].z * HSIZEY + HSIZEX;
-            points[k].y = 2 * points[k].y * points[k].z * HSIZEY + HSIZEY;
+            points[k].x = 2 * points[k].x * -points[k].z * hRes.y + hRes.x;
+            points[k].y = 2 * points[k].y * points[k].z * hRes.y + hRes.y;
             normals[k] = (m * Vec4(d.norm, 0)).GetVector() * points[k].z;
             uvs[k] = d.uv * points[k].z;
 #ifdef SPECULAR
@@ -145,12 +117,12 @@ void Rasterizer::DrawScreen(RenderThread& th, f32 dt)
         for (s32 y = minY; y <= maxY; y++)
         {
             //assert(y < res.y && y >= 0);
-            if (y < 0 || y >= SIZEY) continue;
+            if (y < 0 || y >= res.y) continue;
             bool inside = false;
             for (s32 x = minX; x <= maxX; x++)
             {
                 //assert(x < res.x && x >= 0);
-                if (x < 0 || x >= SIZEX) continue;
+                if (x < 0 || x >= res.x) continue;
                 //assert(pIndex >= 0 && pIndex < SIZEX * SIZEY);
                 //if (pIndex < 0 || pIndex >= pixelCount) continue;
                 Vec3 w = row - B * (f32)(y - minY) - A * (f32)(x - minX);
@@ -178,19 +150,20 @@ void Rasterizer::DrawScreen(RenderThread& th, f32 dt)
                     uv = uv + uvs[k] * w[k];
                 }
                 //if (depth == 0) depth = FP32(0.0001f);
+                if (depth < -1.0f || depth >= 0.0f) continue;
                 depth = 1 / depth;
-                s32 pIndex = y * SIZEX + x;
+                s32 pIndex = y * res.x + x;
 #ifndef TEX_ALPHA
-                if (depth < th.GetDepth(pIndex)) continue;
+                if (depth < th->GetDepth(pIndex)) continue;
 
-                th.SetDepth(pIndex, depth);
+                th->SetDepth(pIndex, depth);
                 uv = uv * depth;
-                Vec3 color = sample(uv); // +FVec3(deltaB, deltaB, deltaB);
+                Vec3 color = texture.Sample(uv).GetVector(); // +FVec3(deltaB, deltaB, deltaB);
 #else
                 uv = uv * depth;
-                Vec4 colortmp = sample2(uv);
-                if (depth < th.GetDepth(pIndex) || colortmp.w < 0.5f) continue;
-                th.SetDepth(pIndex, depth);
+                Vec4 colortmp = texture.Sample(uv);
+                if (depth < th->GetDepth(pIndex) || colortmp.w < 0.5f) continue;
+                th->SetDepth(pIndex, depth);
                 Vec3 color = colortmp.GetVector();
 #endif
                 normal = (normal * depth).Normalize();
@@ -201,13 +174,10 @@ void Rasterizer::DrawScreen(RenderThread& th, f32 dt)
                 color = color * deltaA;
 #ifdef SPECULAR
                 worldPos = worldPos * depth;
-                Vec3 halfV = (lightDir - worldPos.Normalize()).Normalize();
+                const Vec3 view = (cameraPos - worldPos).Normalize();
+                Vec3 halfV = (lightDir + view).Normalize();
                 //FP32 deltaB = FP32(powf(FMax(normal.Dot(halfV), 0).ToFloat(), 64.0f) * 255.0f);
-                f32 deltaB = Util::MaxF(normal.Dot(halfV), 0);
-                for (int i = 0; i < 6; i++)
-                {
-                    deltaB *= deltaB;
-                }
+                f32 deltaB = powf(Util::MaxF(normal.Dot(halfV), 0), 64.0f);
                 deltaB *= 255;
                 color = color + Vec3(deltaB, deltaB, deltaB);
 #endif
@@ -219,8 +189,8 @@ void Rasterizer::DrawScreen(RenderThread& th, f32 dt)
                     if (color[i] < 0) color[i] = 0;
                     if (color[i] > 255) color[i] = 255;
                 }
-                u32 c = ((u32)color.x << 16) + ((u32)(color.y) << 8) + (u32)(color.z);
-                th.SetColor(x, y, c);
+                u32 c = ((u32)color.x << 16) | ((u32)(color.y) << 8) | (u32)(color.z);
+                th->SetColor(x, y, c);
             }
         }
     }

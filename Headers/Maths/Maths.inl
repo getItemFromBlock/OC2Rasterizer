@@ -271,6 +271,33 @@ namespace Maths
         return operator/(Length());
     }
 
+    inline u32 Vec3::GetLargestScalar() const
+    {
+        f32 a = fabsf(x);
+        f32 b = fabsf(y);
+        f32 c = fabsf(z);
+        if (a > b)
+        {
+            if (a > c) return 0;
+            return 2;
+        }
+        return b > c ? 1 : 2;
+    }
+
+    inline Vec2 Vec3::DeleteScalarAt(u32 index) const
+    {
+        assert(index < 3);
+        switch (index)
+        {
+        case 0:
+            return Vec2(y, z);
+        case 1:
+            return Vec2(x, z);
+        default:
+            return Vec2(x, y);
+        }
+    }
+
 #pragma endregion
 
 #pragma region Vec4
@@ -282,7 +309,8 @@ namespace Maths
 
     inline Vec4 Vec4::Homogenize() const
     {
-        return Vec4(GetVector() / w);
+        f32 inv = 1 / w;
+        return Vec4(GetVector() * inv, inv);
     }
 
     inline f32& Vec4::operator[](const size_t a)
@@ -546,6 +574,17 @@ namespace Maths
         if (a > b)
             return a;
         return b;
+    }
+
+    inline u32 Util::ULog2(u32 a)
+    {
+        u32 result = 0;
+        while (a != 0)
+        {
+            result++;
+            a >>= 1;
+        }
+        return (result - 1) & 0x1f;
     }
 
 #pragma endregion

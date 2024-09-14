@@ -34,6 +34,9 @@ namespace Resources
 	{
 		Triangle* faces = NULL;
 		u32* tex = NULL;
+		u32* sky = NULL;
+		Maths::IVec2 tRes;
+		Maths::IVec2 sRes;
 	};
 
 	namespace ModelLoader
@@ -41,7 +44,7 @@ namespace Resources
 		u32 GetFileSize(FILE* in);
 		char* LoadFile(const char* path, u32* sizeOut);
 		bool SaveFile(const char* path, const u32* data, u32 size);
-		ModelData ParseModelFile(const char* source, u32* triCount, Maths::IVec2& res);
+		ModelData ParseModelFile(const char* source, const char* skybox, u32* triCount);
 		void FreeImageData(u32* data);
 #ifdef _WIN32
 		void CreateModelFile(const char* source, const char* tex, const char* dest);

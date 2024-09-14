@@ -68,7 +68,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         ShowWindow(hWnd, nCmdShow);
         UpdateWindow(hWnd);
 
-        th.Init();
         redrawThread = std::thread(RedrawThread, hWnd, &shouldExit);
         LONG_PTR lExStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
         lExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
@@ -89,7 +88,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         }
         shouldExit.store(true);
         redrawThread.join();
-        th.DeInit();
         return (int)msg.wParam;
     }
 }

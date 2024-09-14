@@ -28,6 +28,7 @@ OBJS+= Sources/Rasterizer.o
 OBJS+= Sources/RenderThread.o
 OBJS+= Sources/Maths/Maths.o
 OBJS+= Sources/Resources/ModelLoader.o
+OBJS+= Sources/Resources/Texture.o
 
 DEPS=$(OBJS:.o=.d)
 

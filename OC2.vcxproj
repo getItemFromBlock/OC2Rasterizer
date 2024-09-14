@@ -150,6 +150,7 @@
     <ClInclude Include="Headers\Rasterizer.hpp" />
     <ClInclude Include="Headers\RenderThread.hpp" />
     <ClInclude Include="Headers\Resources\ModelLoader.hpp" />
+    <ClInclude Include="Headers\Resources\Texture.hpp" />
     <ClInclude Include="Headers\Signal.hpp" />
     <ClInclude Include="Headers\Types.hpp" />
     <ClInclude Include="Includes\stb_image.h" />
@@ -164,6 +165,7 @@
     <ClCompile Include="Sources\Rasterizer.cpp" />
     <ClCompile Include="Sources\RenderThread.cpp" />
     <ClCompile Include="Sources\Resources\ModelLoader.cpp" />
+    <ClCompile Include="Sources\Resources\Texture.cpp" />
     <ClCompile Include="Sources\Signal.cpp" />
     <ClCompile Include="Sources\WinMain.cpp" />
   </ItemGroup>
