@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Types.hpp"
-#include "Signal.hpp"
 #include "Maths/Maths.hpp"
 #include "Defines.hpp"
 #include "Rasterizer.hpp"

@@ -36,7 +36,7 @@ Rasterizer::~Rasterizer()
 void Rasterizer::DrawSkybox(RenderThread* th, const Mat4& v)
 {
     const IVec2 res = th->getResolution();
-    const Vec2 half = Vec2(res.x / 2, res.y / 2);
+    const Vec2 half = Vec2(res.x / 2.0f, res.y / 2.0f);
     const Vec2 hRes = Vec2(1.0f / half.x, 1.0f / half.y);
     const Vec3 dx = (v * Vec4(hRes.x, 0, 0, 0)).GetVector();
     const Vec3 dy = (v * Vec4(0, -hRes.y, 0, 0)).GetVector();
@@ -61,7 +61,7 @@ void Rasterizer::DrawScreen(RenderThread* th, f32 dt)
     //tm2 = sinf(tm2) * 0.4f;
     Mat4 m = Mat4::CreateTransformMatrix(Vec3(0, 0, 0), Vec3(0, 0, 0));
     tm *= 2.0f;
-    const Vec3 cameraPos = Vec3(sin(tm) * 7, sin(tm * 0.846876f) * 2.0f, cos(tm) * 7);
+    const Vec3 cameraPos = Vec3(sinf(tm) * 7, sinf(tm * 0.846876f) * 2.0f, cosf(tm) * 7);
     Mat4 v = Mat4::CreateViewMatrix(cameraPos, Vec3(0, 0, 0), Vec3(0, 1, 0));
     if (skybox.IsValid())
     {

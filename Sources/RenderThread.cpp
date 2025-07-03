@@ -246,7 +246,8 @@ RenderThread::RenderThread(u32 scale) :
 	Resources::ModelLoader::CreateModelFile("Assets/Models/golem.obj",			"Assets/Textures/golem.png",			"Assets/Output/golem.bin");
 	Resources::ModelLoader::CreateModelFile("Assets/Models/tnt.obj",			"Assets/Textures/tnt.png",				"Assets/Output/tnt.bin");
 
-	rasterizer.Init("Assets/Output/spaceship.bin", "Assets/Cubemaps/hall.png");
+	//rasterizer.Init("Assets/Output/spaceship.bin", "Assets/Cubemaps/hall.png");
+	rasterizer.Init("Assets/Output/spaceship.bin");
 	start = GetNow();
 }
 #endif

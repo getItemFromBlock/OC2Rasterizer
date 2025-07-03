@@ -235,7 +235,7 @@ namespace Maths
             at(0, 1) * (at(1, 0) * at(2, 2) - at(1, 2) * at(2, 0)) +
             at(0, 2) * (at(1, 0) * at(2, 1) - at(1, 1) * at(2, 0));
 
-        double invdet = 1 / det;
+        f32 invdet = 1 / det;
 
         Mat4 result;
         result.at(0, 0) = (at(1, 1) * at(2, 2) - at(2, 1) * at(1, 2)) * invdet;

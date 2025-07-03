@@ -60,7 +60,7 @@ bool ParseArgs(int argc, char* argv[], Parameters& params)
 		}
 		if (!strcmp(argv[i], "--help"))
 		{
-			printf(helpText);
+			puts(helpText);
 		}
 		if (argv[i][0] != '-')
 		{
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 {
     if (argc < 2)
     {
-        printf(helpText);
+		puts(helpText);
         return 0;
     }
 

@@ -18,11 +18,16 @@ bool captured = false;
 std::atomic_bool shouldExit = false;
 std::thread redrawThread;
 RenderThread th;
+long long previousTime;
+double timeAtStartup;
 
 LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, _In_ LPARAM lParam);
 void SetKeyState(WPARAM wParam, bool pressed);
 void OnMoveMouse(HWND hwnd, bool reset = false);
 void RedrawThread(HWND window, std::atomic_bool* exit);
+long long GetTimeNow();
+double GetTimeNowDouble();
+double GetAppTime();
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR pCmdLine, _In_ int nCmdShow)
 {
@@ -93,6 +98,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 }
 
 Maths::IVec2 res;
+u32 frame = 0;
+u32 fps = 0;
 
 LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
@@ -105,8 +112,24 @@ LRESULT CALLBACK WndProc(_In_ HWND hWnd, _In_ UINT message, _In_ WPARAM wParam, 
         HDC hdc = BeginPaint(hWnd, &ps);
         
         th.RenderFrame(hdc, res);
+        long long time = GetTimeNow();
+        if (time != previousTime)
+        {
+            fps = frame;
+            frame = 0;
+            previousTime = time;
+        }
+        RECT r;
+        r.left = 0;
+        r.right = 100;
+        r.top = 0;
+        r.bottom = 50;
+        wchar_t buffer[32];
+        int len = swprintf_s(buffer, 32, L"FPS: %d", fps);
+        DrawTextW(hdc, buffer, len, &r, DT_LEFT | DT_TOP | DT_NOCLIP | DT_NOPREFIX);
 
         EndPaint(hWnd, &ps);
+        frame++;
     }
         break;
     case WM_CLEAR:
@@ -231,4 +254,25 @@ void RedrawThread(HWND window, std::atomic_bool* exitVal)
         RedrawWindow(window, NULL, NULL, RDW_INTERNALPAINT);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+}
+
+long long GetTimeNow()
+{
+    FILETIME ft_now;
+    GetSystemTimeAsFileTime(&ft_now);
+    long long int now = (LONGLONG)ft_now.dwLowDateTime + ((LONGLONG)(ft_now.dwHighDateTime) << 32LL);
+    return now / 10000000;
+}
+
+double GetTimeNowDouble()
+{
+    FILETIME ft_now;
+    GetSystemTimeAsFileTime(&ft_now);
+    long long int now = (LONGLONG)ft_now.dwLowDateTime + ((LONGLONG)(ft_now.dwHighDateTime) << 32LL);
+    return now / 10000000.0;
+}
+
+double GetAppTime()
+{
+    return GetTimeNowDouble() - timeAtStartup;
 }

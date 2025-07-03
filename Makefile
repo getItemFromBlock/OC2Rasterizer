@@ -15,7 +15,7 @@ CP = cp -f
 endif
 
 BIN=rasterizer
-CXXFLAGS=-O3 -g -Wall -Wextra -Wno-unknown-pragmas -Wno-deprecated-copy -nodefaultlibs -fno-rtti -fno-exceptions
+CXXFLAGS=-O3 -g -Wall -Wextra -Wno-unknown-pragmas -Wno-deprecated-copy -nodefaultlibs -fno-rtti -fno-exceptions -march=rv64imafdc_zifencei2
 #CXXFLAGS += -pg
 CFLAGS=$(CXXFLAGS)
 CPPFLAGS=-IIncludes -IHeaders -MMD
